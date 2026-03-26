@@ -49,9 +49,6 @@ Claude Code is powerful — but it's easy to lose track of how much you're actua
     </td>
   </tr>
 </table>
-
-> **Add your own screenshots:** take a screenshot of the app and replace the placeholders in `docs/`.
-
 </div>
 
 ---
