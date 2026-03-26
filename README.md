@@ -130,16 +130,14 @@ Head to the [**latest release**](https://github.com/bolacha/claude-tray-usage/re
 
 | Platform | File |
 |----------|------|
-| macOS (M1/M2/M3 + Intel) | `claude-tray-macos-universal.zip` |
-| macOS Apple Silicon only | `claude-tray-macos-arm64.zip` |
-| macOS Intel only | `claude-tray-macos-amd64.zip` |
+| macOS (Apple Silicon — M1/M2/M3/M4) | `claude-tray-macos-arm64.zip` |
 | Linux x86_64 | `claude-tray-linux-amd64.tar.gz` |
 | Linux arm64 | `claude-tray-linux-arm64.tar.gz` |
 | Windows | `claude-tray-windows-amd64.zip` |
 
 **macOS** — unzip, then allow the binary past Gatekeeper:
 ```bash
-unzip claude-tray-macos-universal.zip
+unzip claude-tray-macos-arm64.zip
 xattr -cr claude-tray && ./claude-tray
 ```
 

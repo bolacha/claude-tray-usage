@@ -6,17 +6,18 @@ on:
   pull_request:
     branches: ["main", "master"]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
-    name: Build — ${{ matrix.os }}
+    name: Build — ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: macos-latest
             name: macOS (arm64)
-          - os: macos-13
-            name: macOS (amd64)
           - os: ubuntu-latest
             name: Linux
           - os: windows-latest
@@ -43,13 +44,13 @@ jobs:
         run: go vet ./...
 
       - name: Build
+        if: runner.os != 'Windows'
         env:
           CGO_ENABLED: "1"
         run: go build -o /dev/null .
-        if: runner.os != 'Windows'
 
       - name: Build (Windows)
+        if: runner.os == 'Windows'
         env:
           CGO_ENABLED: "1"
         run: go build -ldflags="-H windowsgui" -o NUL .
-        if: runner.os == 'Windows'
