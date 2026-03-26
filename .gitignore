@@ -1,0 +1,45 @@
+# ── Compiled binaries ────────────────────────────────────────────────────
+claude-tray
+claude-tray.exe
+*.exe
+*.app
+dist/
+
+# ── Build cache ──────────────────────────────────────────────────────────
+/tmp/
+
+# ── Claude Code local settings (machine-specific, may contain local paths) ──
+.claude/
+
+# ── macOS ────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ── Linux ────────────────────────────────────────────────────────────────
+*~
+.fuse_hidden*
+.Trash-*
+
+# ── Windows ──────────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── Go ───────────────────────────────────────────────────────────────────
+# go.sum is intentionally committed — do not ignore it
+vendor/
+
+# ── Editor & IDE ─────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+
+# ── Environment & secrets ────────────────────────────────────────────────
+.env
+.env.*
+*.key
+*.pem

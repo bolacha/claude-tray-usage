@@ -1,0 +1,258 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  # ── macOS Apple Silicon (arm64) ──────────────────────────────────────────
+  build-macos-arm64:
+    name: macOS (Apple Silicon)
+    runs-on: macos-latest   # macos-14+, M1 runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build
+        env:
+          GOARCH: arm64
+          CGO_ENABLED: "1"
+        run: |
+          go build -ldflags="-s -w" -o claude-tray .
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          zip dist/claude-tray-macos-arm64.zip claude-tray
+          echo "Built $(./claude-tray --version 2>/dev/null || echo 'ok')"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64
+          path: dist/claude-tray-macos-arm64.zip
+
+  # ── macOS Intel (amd64) ──────────────────────────────────────────────────
+  build-macos-amd64:
+    name: macOS (Intel)
+    runs-on: macos-13       # last Intel runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build
+        env:
+          GOARCH: amd64
+          CGO_ENABLED: "1"
+        run: |
+          go build -ldflags="-s -w" -o claude-tray .
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          zip dist/claude-tray-macos-amd64.zip claude-tray
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-amd64
+          path: dist/claude-tray-macos-amd64.zip
+
+  # ── macOS Universal binary (arm64 + amd64 via lipo) ─────────────────────
+  build-macos-universal:
+    name: macOS (Universal)
+    needs: [build-macos-arm64, build-macos-amd64]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-arm64
+          path: arm64
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-amd64
+          path: amd64
+
+      - name: Create universal binary
+        run: |
+          unzip arm64/claude-tray-macos-arm64.zip -d arm64/
+          unzip amd64/claude-tray-macos-amd64.zip -d amd64/
+          lipo -create -output claude-tray arm64/claude-tray amd64/claude-tray
+          lipo -info claude-tray
+          mkdir -p dist
+          zip dist/claude-tray-macos-universal.zip claude-tray
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal
+          path: dist/claude-tray-macos-universal.zip
+
+  # ── Linux x86_64 ────────────────────────────────────────────────────────
+  build-linux-amd64:
+    name: Linux (x86_64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: Build
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          go build -ldflags="-s -w" -o claude-tray .
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar czf dist/claude-tray-linux-amd64.tar.gz claude-tray
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64
+          path: dist/claude-tray-linux-amd64.tar.gz
+
+  # ── Linux arm64 ─────────────────────────────────────────────────────────
+  build-linux-arm64:
+    name: Linux (arm64)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: Build
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          go build -ldflags="-s -w" -o claude-tray .
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar czf dist/claude-tray-linux-arm64.tar.gz claude-tray
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: dist/claude-tray-linux-arm64.tar.gz
+
+  # ── Windows x86_64 ──────────────────────────────────────────────────────
+  build-windows-amd64:
+    name: Windows (x86_64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          go build -ldflags="-s -w -H windowsgui" -o claude-tray.exe .
+
+      - name: Package
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Compress-Archive -Path claude-tray.exe -DestinationPath dist/claude-tray-windows-amd64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-amd64
+          path: dist/claude-tray-windows-amd64.zip
+
+  # ── Create GitHub Release ────────────────────────────────────────────────
+  release:
+    name: Publish Release
+    needs:
+      - build-macos-universal
+      - build-macos-arm64
+      - build-macos-amd64
+      - build-linux-amd64
+      - build-linux-arm64
+      - build-windows-amd64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f | sort
+
+      - name: Create checksums
+        run: |
+          cd artifacts
+          find . -name "*.zip" -o -name "*.tar.gz" | sort | xargs sha256sum > ../checksums.txt
+          cat ../checksums.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/macos-universal/claude-tray-macos-universal.zip
+            artifacts/macos-arm64/claude-tray-macos-arm64.zip
+            artifacts/macos-amd64/claude-tray-macos-amd64.zip
+            artifacts/linux-amd64/claude-tray-linux-amd64.tar.gz
+            artifacts/linux-arm64/claude-tray-linux-arm64.tar.gz
+            artifacts/windows-amd64/claude-tray-windows-amd64.zip
+            checksums.txt
+          body: |
+            ## Installation
+
+            | Platform | Download |
+            |----------|----------|
+            | macOS Universal (M1 + Intel) | `claude-tray-macos-universal.zip` |
+            | macOS Apple Silicon (M1/M2/M3) | `claude-tray-macos-arm64.zip` |
+            | macOS Intel | `claude-tray-macos-amd64.zip` |
+            | Linux x86_64 | `claude-tray-linux-amd64.tar.gz` |
+            | Linux arm64 | `claude-tray-linux-arm64.tar.gz` |
+            | Windows x86_64 | `claude-tray-windows-amd64.zip` |
+
+            ### macOS — first launch
+            macOS will block an unsigned binary. Run once to allow it:
+            ```bash
+            unzip claude-tray-macos-universal.zip
+            xattr -cr claude-tray
+            ./claude-tray
+            ```
+
+            ### Linux
+            ```bash
+            tar xzf claude-tray-linux-amd64.tar.gz
+            ./claude-tray
+            ```
+
+            ### Windows
+            Extract `claude-tray-windows-amd64.zip` and double-click `claude-tray.exe`.
+
+            ---
+            Verify downloads with `checksums.txt` (SHA-256).

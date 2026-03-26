@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  build:
+    name: Build — ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS (arm64)
+          - os: macos-13
+            name: macOS (amd64)
+          - os: ubuntu-latest
+            name: Linux
+          - os: windows-latest
+            name: Windows
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: go vet
+        if: runner.os != 'Windows'
+        run: go vet ./...
+
+      - name: Build
+        env:
+          CGO_ENABLED: "1"
+        run: go build -o /dev/null .
+        if: runner.os != 'Windows'
+
+      - name: Build (Windows)
+        env:
+          CGO_ENABLED: "1"
+        run: go build -ldflags="-H windowsgui" -o NUL .
+        if: runner.os == 'Windows'
